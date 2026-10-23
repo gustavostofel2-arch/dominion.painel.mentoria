@@ -10,10 +10,11 @@ dores, dúvidas, desejos, elogios, qualidade da mentoria e alunos que mais ajuda
 
 - [x] Login (Supabase Auth) e proteção das telas
 - [x] Banco de dados (`supabase/schema.sql`) e dados de exemplo (`supabase/seed.sql`)
-- [x] Tela **Visão geral**
-- [ ] Resumo do dia, Histórico, Temas e dores, Dúvidas e qualidade, Alunos, Relatórios (semanal e mensal)
-- [ ] Ligar o programa do GitHub (`leitura telegram/resumo.py`) para gravar no Supabase
-- [ ] Gerar os relatórios semanal e mensal automaticamente
+- [x] Telas: Visão geral, Resumo do dia, Histórico, Temas e dores, Dúvidas e qualidade, Alunos e Relatórios (semanal e mensal)
+- [x] Os dados vêm do repositório `resumo-telegram` (GitHub Actions): `resumo.py` grava o dia e `relatorios.py` gera os relatórios semanal e mensal
+
+O painel só **lê** o Supabase. Quem grava é o `resumo-telegram`, com a chave secreta (`SUPABASE_SECRET_KEY`),
+que nunca deve aparecer neste repositório nem no painel.
 
 ## Como ligar (resumo)
 
