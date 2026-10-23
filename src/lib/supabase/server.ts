@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 export function supabaseConfigurado(): boolean {
   return Boolean(
@@ -8,8 +9,8 @@ export function supabaseConfigurado(): boolean {
   );
 }
 
-/** Cliente do Supabase para usar em páginas e ações do servidor. */
-export async function criarClienteServidor() {
+/** Cliente do Supabase para usar em páginas e ações do servidor (um só por requisição). */
+export const criarClienteServidor = cache(async function criarClienteServidor() {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -32,4 +33,4 @@ export async function criarClienteServidor() {
       },
     },
   );
-}
+});

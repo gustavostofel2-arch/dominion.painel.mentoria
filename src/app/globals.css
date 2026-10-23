@@ -240,7 +240,7 @@ a.tr:hover { background: var(--cinza); }
 
   /* Tabelas viram cartões */
   .rolagem { overflow-x: visible; }
-  .tabela { min-width: 0; }
+  .tabela { min-width: 0 !important; }
   .tr.cab { display: none !important; }
   .tr { display: flex !important; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 12px 8px; }
   .tr > :first-child { flex: 1 1 100%; }
@@ -264,3 +264,13 @@ a.tr:hover { background: var(--cinza); }
 .campo input { font-family: var(--fonte), sans-serif; text-transform: none; letter-spacing: 0; font-size: 16px; font-weight: 500; color: var(--tinta); padding: 12px 14px; border-radius: 10px; border: 1px solid var(--borda); background: var(--cinza); width: 100%; }
 .campo input:focus { outline: 2px solid var(--marca); outline-offset: 1px; border-color: var(--marca); }
 .erro { padding: 10px 14px; border-radius: 10px; background: var(--ruim-fundo); color: var(--ruim); font-size: 13px; font-weight: 600; }
+
+/* Esqueleto de carregamento */
+.carregando { display: flex; flex-direction: column; gap: 16px; }
+.esq { border-radius: 8px; background: linear-gradient(90deg, var(--cinza) 25%, #24242b 50%, var(--cinza) 75%); background-size: 200% 100%; animation: brilho 1.3s ease-in-out infinite; }
+.esq-titulo { height: 34px; width: min(320px, 70%); }
+.esq-linha { height: 14px; width: 100%; margin-top: 12px; }
+.esq-numero { height: 30px; width: 50%; margin-top: 14px; }
+.esq-card { display: flex; flex-direction: column; }
+@keyframes brilho { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .esq { animation: none; } }

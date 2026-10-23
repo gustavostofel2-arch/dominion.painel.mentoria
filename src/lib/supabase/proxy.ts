@@ -30,9 +30,9 @@ export async function atualizarSessao(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims confere o login localmente e renova a sessão quando precisa (sem chamada extra ao Supabase)
+  const { data: claims } = await supabase.auth.getClaims();
+  const user = claims?.claims ?? null;
 
   const naTelaDeLogin = request.nextUrl.pathname.startsWith("/login");
 

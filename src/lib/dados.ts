@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cache } from "react";
 
 export type Grupo = { id: string; nome: string; referencia: string | null };
 
@@ -57,31 +58,30 @@ export type Contexto = {
 };
 
 /** Escolhe o grupo a mostrar: o real, se existir; senão o de exemplo. */
-export async function obterGrupo(supabase: SupabaseClient): Promise<Grupo | null> {
+export const obterGrupo = cache(async function obterGrupo(supabase: SupabaseClient): Promise<Grupo | null> {
   const { data } = await supabase
     .from("grupos")
     .select("id, nome, referencia")
     .order("criado_em", { ascending: true });
   const lista = (data ?? []) as Grupo[];
   return lista.find((g) => !g.nome.includes("(EXEMPLO)")) ?? lista[0] ?? null;
-}
+});
 
-export async function obterContexto(supabase: SupabaseClient): Promise<Contexto> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { email: null, membro: false, grupo: null };
+export const obterContexto = cache(async function obterContexto(supabase: SupabaseClient): Promise<Contexto> {
+  // getClaims confere o login localmente (sem ir ao servidor de login a cada tela)
+  const { data: claims } = await supabase.auth.getClaims();
+  const userId = claims?.claims?.sub;
+  if (!userId) return { email: null, membro: false, grupo: null };
+  const email = (claims?.claims?.email as string | undefined) ?? null;
 
-  const { data: linha } = await supabase
-    .from("membros_painel")
-    .select("user_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
+  // As duas consultas saem juntas. Quem não é da equipe não enxerga o grupo (regra do banco).
+  const [{ data: linha }, grupo] = await Promise.all([
+    supabase.from("membros_painel").select("user_id").eq("user_id", userId).maybeSingle(),
+    obterGrupo(supabase),
+  ]);
   const membro = Boolean(linha);
-  const grupo = membro ? await obterGrupo(supabase) : null;
-  return { email: user.email ?? null, membro, grupo };
-}
+  return { email, membro, grupo: membro ? grupo : null };
+});
 
 export type VisaoGeral = {
   dia: Dia;
