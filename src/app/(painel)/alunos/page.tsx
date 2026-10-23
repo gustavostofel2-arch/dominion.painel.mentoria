@@ -182,10 +182,10 @@ export default async function AlunosPage({
               ) : (
                 <>
                   <div style={{ display: "flex", height: 12, borderRadius: 999, overflow: "hidden", gap: 3, marginTop: 10 }}>
-                    <div style={{ flex: pctEquipe || 0.001, background: "#0E7C6B" }} />
-                    <div style={{ flex: 100 - pctEquipe || 0.001, background: "#86CDBF" }} />
+                    <div style={{ flex: pctEquipe || 0.001, background: "#ffb020" }} />
+                    <div style={{ flex: 100 - pctEquipe || 0.001, background: "#8ab4ff" }} />
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, color: "#3f4b48", marginTop: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, color: "#9d9ca6", marginTop: 8 }}>
                     <span>{pctEquipe}% equipe</span>
                     <span>{100 - pctEquipe}% colegas</span>
                   </div>
@@ -210,7 +210,7 @@ export default async function AlunosPage({
 
           <div className="card" style={{ background: "var(--cinza)" }}>
             <div className="lbl">Privacidade</div>
-            <p style={{ fontSize: 13, lineHeight: 1.6, marginTop: 6, color: "#26332f" }}>
+            <p style={{ fontSize: 13, lineHeight: 1.6, marginTop: 6, color: "#d8d6d0" }}>
               O painel guarda apenas números por aluno (mensagens, respostas e dúvidas). Com “Mostrar nomes”
               desligado, aparecem só as iniciais.
             </p>

@@ -107,8 +107,8 @@ export default async function ResumoDoDia({ params }: { params: Promise<{ data: 
       </div>
 
       {dia.frase && (
-        <section className="card" style={{ background: "var(--marca)", color: "#fff", borderColor: "var(--marca)" }}>
-          <div className="lbl" style={{ color: "#cdebe5" }}>
+        <section className="card destaque">
+          <div className="lbl">
             O dia em uma frase
           </div>
           <p style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.4, marginTop: 8, maxWidth: 900 }}>{dia.frase}</p>
@@ -166,7 +166,7 @@ export default async function ResumoDoDia({ params }: { params: Promise<{ data: 
                 {d.status !== "resolvida" && d.sugestao && (
                   <>
                     <br />
-                    <span style={{ color: "#8a4b08" }}>Sugestão: {d.sugestao}</span>
+                    <span style={{ color: "#ffcf7a" }}>Sugestão: {d.sugestao}</span>
                   </>
                 )}
               </span>
@@ -218,7 +218,7 @@ export default async function ResumoDoDia({ params }: { params: Promise<{ data: 
                   <i
                     style={{
                       width: `${(Number(q.nota ?? 0) / 10) * 100}%`,
-                      background: Number(q.nota ?? 0) < 6 ? "#E5484D" : "var(--marca)",
+                      background: Number(q.nota ?? 0) < 6 ? "#ff6b6b" : "var(--marca)",
                     }}
                   />
                 </div>

@@ -250,7 +250,7 @@ export default async function DuvidasPage({
                   <i
                     style={{
                       width: `${((d.atual ?? 0) / 10) * 100}%`,
-                      background: (d.atual ?? 0) < 6 ? "#E5484D" : "var(--marca)",
+                      background: (d.atual ?? 0) < 6 ? "#ff6b6b" : "var(--marca)",
                     }}
                   />
                 </div>

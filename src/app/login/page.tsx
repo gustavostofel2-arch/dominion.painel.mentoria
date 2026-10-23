@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { criarClienteServidor, supabaseConfigurado } from "@/lib/supabase/server";
 import Configuracao from "@/components/Configuracao";
+import Logo from "@/components/Logo";
 
 async function entrar(formData: FormData) {
   "use server";
@@ -32,15 +33,12 @@ export default async function LoginPage({
   return (
     <div className="login-pagina">
       <form className="login-card" action={entrar}>
-        <div className="brand" style={{ padding: 0 }}>
-          <div className="logo">D</div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 16 }}>Dominion</div>
-            <div style={{ fontSize: 12, color: "var(--suave)" }}>Painel da mentoria</div>
-          </div>
+        <div className="brand" style={{ padding: "0 0 16px" }}>
+          <Logo tamanho={30} />
+          <div className="sub">Painel da mentoria</div>
         </div>
 
-        <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em" }}>Entrar</h1>
+        <h1>Entrar</h1>
 
         {erro && <div className="erro">E-mail ou senha incorretos. Tente de novo.</div>}
 

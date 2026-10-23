@@ -174,7 +174,7 @@ export default async function HistoricoPage({
               <div className="lbl">Dia selecionado</div>
               <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 4 }}>{dataPorExtenso(selecionado.data)}</h2>
               {selecionado.frase && (
-                <p style={{ fontSize: 14, lineHeight: 1.6, marginTop: 8, color: "#26332f" }}>{selecionado.frase}</p>
+                <p style={{ fontSize: 14, lineHeight: 1.6, marginTop: 8, color: "#d8d6d0" }}>{selecionado.frase}</p>
               )}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
                 {topInsights.slice(0, 3).map((i) => (

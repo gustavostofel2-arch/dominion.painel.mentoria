@@ -27,11 +27,11 @@ export default function GraficoHorario({ porHora }: { porHora: number[] }) {
             width={28}
             height={h}
             rx={Math.min(8, h / 2)}
-            fill={i === pico ? "#0E7C6B" : "#BFE3DC"}
+            fill={i === pico ? "#ffb020" : "#3a3a44"}
           />
         );
       })}
-      <g fontSize="11" fill="#55625F" textAnchor="middle">
+      <g fontSize="11" fill="#9d9ca6" textAnchor="middle">
         {[0, 4, 8, 12, 16, 20].map((hora) => (
           <text key={hora} x={(hora / 2) * 40 + 20} y={150}>
             {hora}h

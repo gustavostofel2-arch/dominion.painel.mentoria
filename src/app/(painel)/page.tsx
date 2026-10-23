@@ -252,7 +252,7 @@ export default async function VisaoGeralPage({
                   gap: 24,
                   marginTop: 18,
                   paddingTop: 16,
-                  borderTop: "1px solid var(--fundo)",
+                  borderTop: "1px solid var(--borda)",
                 }}
               >
                 {pctPrincipal !== null && (
@@ -289,7 +289,7 @@ export default async function VisaoGeralPage({
         </div>
       </section>
 
-      <section className="row" style={{ alignItems: "stretch" }}>
+      <section className="row tres" style={{ alignItems: "stretch" }}>
         <div className="card" style={{ flex: "1 1 340px", minWidth: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h2 className="h2">Dúvidas em aberto</h2>
@@ -340,11 +340,11 @@ export default async function VisaoGeralPage({
         <div className="card" style={{ flex: "1 1 300px", minWidth: 0 }}>
           <h2 className="h2">Clima do grupo</h2>
           <div style={{ display: "flex", height: 14, borderRadius: 999, overflow: "hidden", marginTop: 18, gap: 3 }}>
-            <div style={{ flex: pct(clima.pos) || 0.001, background: "#2F9E6E" }} />
-            <div style={{ flex: pct(clima.neu) || 0.001, background: "#C7D2CF" }} />
-            <div style={{ flex: pct(clima.neg) || 0.001, background: "#E5484D" }} />
+            <div style={{ flex: pct(clima.pos) || 0.001, background: "#7fd99a" }} />
+            <div style={{ flex: pct(clima.neu) || 0.001, background: "#4a4a55" }} />
+            <div style={{ flex: pct(clima.neg) || 0.001, background: "#ff6b6b" }} />
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 12, fontWeight: 700, color: "#3f4b48" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: 12, fontWeight: 700, color: "#9d9ca6" }}>
             <span>{pct(clima.pos)}% positivo</span>
             <span>{pct(clima.neu)}% neutro</span>
             <span>{pct(clima.neg)}% negativo</span>
@@ -356,8 +356,8 @@ export default async function VisaoGeralPage({
       </section>
 
       {ultimoDiaDados?.frase && (
-        <section className="card" style={{ background: "var(--marca)", color: "#fff", borderColor: "var(--marca)" }}>
-          <div className="lbl" style={{ color: "#cdebe5" }}>
+        <section className="card destaque">
+          <div className="lbl">
             {janela === 1 ? "O dia em uma frase" : "O último dia em uma frase"}
           </div>
           <p style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.45, marginTop: 8, maxWidth: 900 }}>
@@ -368,7 +368,7 @@ export default async function VisaoGeralPage({
 
       {acao && (
         <section className="card escuro">
-          <div className="lbl" style={{ color: "#9fb3ae" }}>
+          <div className="lbl">
             Ação recomendada para a equipe
           </div>
           <p style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5, marginTop: 8, maxWidth: 820 }}>{acao.texto}</p>

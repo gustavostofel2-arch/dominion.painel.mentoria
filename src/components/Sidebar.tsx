@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import Logo from "./Logo";
 
 const itens = [
   { href: "/", rotulo: "Visão geral" },
@@ -53,11 +54,8 @@ export default function Sidebar({
       {/* Computador: barra lateral */}
       <aside className="side">
         <div className="brand">
-          <div className="logo">D</div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>Dominion</div>
-            <div style={{ fontSize: 12, color: "var(--suave)" }}>Painel da mentoria</div>
-          </div>
+          <Logo tamanho={26} />
+          <div className="sub">Painel da mentoria</div>
         </div>
 
         {itens.map((item) => {
@@ -100,7 +98,7 @@ export default function Sidebar({
       {/* Celular: barra de cima com os três pontinhos */}
       <header className="mobile-bar">
         <div className="mobile-topo">
-          <div className="logo">D</div>
+          <img className="logo-icone" src="/icon.png" alt="" width={36} height={36} />
           <div className="mobile-titulo">
             <strong>{paginaAtual}</strong>
             <span>{grupoNome ?? "Painel da mentoria"}</span>

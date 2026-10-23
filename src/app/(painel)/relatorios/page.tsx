@@ -23,12 +23,12 @@ import {
 export const dynamic = "force-dynamic";
 
 const COR_TIPO: Record<string, string> = {
-  dor: "#E5484D",
-  elogio: "#2F9E6E",
-  duvida: "#3B82F6",
-  desejo: "#8B5CF6",
-  dica: "#F59E0B",
-  critica: "#F59E0B",
+  dor: "#ff6b6b",
+  elogio: "#7fd99a",
+  duvida: "#8ab4ff",
+  desejo: "#b79cff",
+  dica: "#ffb020",
+  critica: "#ffb020",
 };
 
 function lista<T>(conteudo: Record<string, unknown>, chave: string): T[] {
@@ -166,7 +166,7 @@ export default async function RelatoriosPage({
 
       {selecionado.frase && (
         <section className="card escuro">
-          <div className="lbl" style={{ color: "#9fb3ae" }}>
+          <div className="lbl">
             {tipo === "mensal" ? "O mês em poucas linhas" : "A semana em poucas linhas"}
           </div>
           <p style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.55, marginTop: 8, maxWidth: 960 }}>
@@ -273,7 +273,7 @@ export default async function RelatoriosPage({
                   <span>{numero(n.nota)}</span>
                 </div>
                 <div className="medidor">
-                  <i style={{ width: `${(n.nota / 10) * 100}%`, background: n.nota < 6 ? "#E5484D" : "var(--marca)" }} />
+                  <i style={{ width: `${(n.nota / 10) * 100}%`, background: n.nota < 6 ? "#ff6b6b" : "var(--marca)" }} />
                 </div>
               </div>
             ))}

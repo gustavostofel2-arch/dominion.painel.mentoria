@@ -21,9 +21,9 @@ const FILTROS: { valor: string; rotulo: string }[] = [
 
 /** Para dores e críticas, subir é ruim; para elogios, pedidos e dicas, subir é bom. */
 function corTendencia(tipo: Tipo, subiu: boolean): string {
-  if (tipo === "dor" || tipo === "critica") return subiu ? "#B42318" : "#067647";
-  if (tipo === "duvida") return "#55625F";
-  return subiu ? "#067647" : "#55625F";
+  if (tipo === "dor" || tipo === "critica") return subiu ? "#ff6b6b" : "#7fd99a";
+  if (tipo === "duvida") return "#9d9ca6";
+  return subiu ? "#7fd99a" : "#9d9ca6";
 }
 
 export default async function TemasPage({

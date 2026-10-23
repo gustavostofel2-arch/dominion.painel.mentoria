@@ -17,7 +17,7 @@ function pontos(valores: number[], largura: number, altura: number, folga = 4): 
 
 export function Spark({
   valores,
-  cor = "#55625F",
+  cor = "#9d9ca6",
   rotulo,
 }: {
   valores: number[];
@@ -40,7 +40,7 @@ export function Spark({
 
 export function Linha({
   valores,
-  cor = "#0E7C6B",
+  cor = "#ffb020",
   area = false,
   altura = 120,
   rotulo,
@@ -107,12 +107,12 @@ export function Barras({
               width={barra}
               height={h}
               rx={Math.min(10, h / 2)}
-              fill={i === pico ? "#0E7C6B" : item.parcial ? "#BFE3DC" : "#86CDBF"}
+              fill={i === pico ? "#ffb020" : item.parcial ? "#3a3a44" : "#8ab4ff"}
             />
-            <text x={x + barra / 2} y={160 - h - 6} textAnchor="middle" fontSize="12" fontWeight="700" fill="#55625F">
+            <text x={x + barra / 2} y={160 - h - 6} textAnchor="middle" fontSize="12" fontWeight="700" fill="#9d9ca6">
               {item.valor.toLocaleString("pt-BR")}
             </text>
-            <text x={x + barra / 2} y={182} textAnchor="middle" fontSize="12" fill="#55625F">
+            <text x={x + barra / 2} y={182} textAnchor="middle" fontSize="12" fill="#9d9ca6">
               {item.rotulo}
             </text>
           </g>
