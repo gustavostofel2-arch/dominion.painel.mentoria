@@ -20,7 +20,7 @@ async function alternarAcao(formData: FormData) {
     .from("acoes")
     .update({ feita, feita_em: feita ? new Date().toISOString() : null })
     .eq("id", id);
-  revalidatePath(`/dia/${data}`);
+  revalidatePath("/", "layout"); // limpa o guardado de todas as telas (a visão geral também mostra as ações)
 }
 
 function Item({ insight }: { insight: Insight }) {
