@@ -1,17 +1,20 @@
 import Link from "next/link";
 import GraficoHorario from "@/components/GraficoHorario";
+import AlertasAlunos from "@/components/AlertasAlunos";
 import { criarClienteServidor } from "@/lib/supabase/server";
 import { dataPorExtenso, iniciais, obterGrupo, rotuloTipo } from "@/lib/dados";
 import {
   obterAcoesDoDia,
+  obterAlertasPeriodo,
   obterAtividadePeriodo,
   obterDiasCompletos,
   obterInsightsPeriodo,
   obterQualidadePeriodo,
+  resumirAlertas,
   ultimoDia,
   type InsightComDia,
 } from "@/lib/consultas";
-import { agrupar, media, milhar, numero, periodoPorExtenso, soma, somarDias, variacaoPct } from "@/lib/util";
+import { agrupar, milhar, notaPonderada, numero, periodoPorExtenso, soma, somarDias, variacaoPct } from "@/lib/util";
 
 export const dynamic = "force-dynamic";
 
@@ -57,11 +60,12 @@ export default async function VisaoGeralPage({
   const desde = somarDias(ultima, -(janela - 1));
   const antesDesde = somarDias(desde, -janela);
 
-  const [diasTodos, insights, qualidade, atividade] = await Promise.all([
+  const [diasTodos, insights, qualidade, atividade, alertasBrutos] = await Promise.all([
     obterDiasCompletos(supabase, grupo.id, antesDesde, ultima),
     obterInsightsPeriodo(supabase, grupo.id, desde, ultima),
     obterQualidadePeriodo(supabase, grupo.id, desde, ultima),
     obterAtividadePeriodo(supabase, grupo.id, desde, ultima),
+    obterAlertasPeriodo(supabase, grupo.id, desde, ultima),
   ]);
 
   const dias = diasTodos.filter((d) => d.data >= desde);
@@ -88,8 +92,8 @@ export default async function VisaoGeralPage({
     .filter((d) => d.status !== "resolvida");
   const taxa = duvidas.length ? Math.round((resolvidas.length / duvidas.length) * 100) : null;
 
-  const notas = qualidade.map((q) => q.nota).filter((n): n is number => n !== null).map(Number);
-  const experiencia = media(notas);
+  const experiencia = notaPonderada(qualidade);
+  const alertas = resumirAlertas(alertasBrutos);
 
   // Assunto mais falado: o tema com mais menções somadas no período
   const temas = [...agrupar(insights, (i) => i.temas?.id ?? i.titulo).values()]
@@ -304,6 +308,11 @@ export default async function VisaoGeralPage({
                 <span className="tag t-duvida">{d.status === "divergente" ? "divergente" : "aberta"}</span>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{d.titulo}</div>
+                  {d.pergunta_texto && (
+                    <div className="sub" style={{ marginTop: 2 }}>
+                      “{d.pergunta_texto.length > 160 ? `${d.pergunta_texto.slice(0, 160)}…` : d.pergunta_texto}”
+                    </div>
+                  )}
                   <div className="sub" style={{ marginTop: 2 }}>
                     {d.qtd_alunos} {d.qtd_alunos === 1 ? "aluno perguntou" : "alunos perguntaram"}
                   </div>
@@ -354,6 +363,8 @@ export default async function VisaoGeralPage({
           </p>
         </div>
       </section>
+
+      {alertas.length > 0 && <AlertasAlunos alertas={alertas.slice(0, 5)} />}
 
       {ultimoDiaDados?.frase && (
         <section className="card destaque">

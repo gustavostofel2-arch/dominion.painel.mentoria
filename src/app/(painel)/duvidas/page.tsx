@@ -8,7 +8,8 @@ import {
   ultimoDia,
 } from "@/lib/consultas";
 import { Linha } from "@/components/graficos";
-import { agrupar, media, mediana, milhar, numero, somarDias, soma } from "@/lib/util";
+import Duvida from "@/components/Duvida";
+import { agrupar, mediana, milhar, notaPonderada, numero, somarDias, soma } from "@/lib/util";
 
 export const dynamic = "force-dynamic";
 
@@ -72,9 +73,13 @@ export default async function DuvidasPage({
     const ordem = [...lista].sort((a, b) => b.dias.data.localeCompare(a.dias.data));
     const ultimo = ordem[0];
     const comResposta = ordem.find((o) => o.resposta_resumo);
+    const comPergunta = ordem.find((o) => o.pergunta_texto) ?? ultimo;
+    const comRespostaLiteral = ordem.find((o) => o.resposta_texto) ?? comResposta ?? null;
     const abertas = ordem.filter((o) => o.status !== "resolvida");
     return {
       titulo: ultimo.titulo,
+      pergunta: comPergunta,
+      respostaItem: comRespostaLiteral,
       vezes: soma(lista.map((l) => l.qtd_alunos)),
       dias: new Set(lista.map((l) => l.dias.data)).size,
       status: ultimo.status,
@@ -102,8 +107,8 @@ export default async function DuvidasPage({
   const dimensoes = [...new Set(qualidadeTodas.map((q) => q.dimensao))];
   const porDimensao = dimensoes.map((nome) => {
     const doNome = qualidadeTodas.filter((q) => q.dimensao === nome && q.nota !== null);
-    const a = media(doNome.filter((q) => q.dias.data >= desde).map((q) => Number(q.nota)));
-    const b = media(doNome.filter((q) => q.dias.data <= antesAte).map((q) => Number(q.nota)));
+    const a = notaPonderada(doNome.filter((q) => q.dias.data >= desde));
+    const b = notaPonderada(doNome.filter((q) => q.dias.data <= antesAte));
     return { nome, atual: a, delta: a !== null && b !== null ? Math.round((a - b) * 10) / 10 : null };
   });
   const porData = agrupar(
@@ -112,7 +117,7 @@ export default async function DuvidasPage({
   );
   const experienciaPorDia = [...porData.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([, v]) => media(v.map((q) => Number(q.nota))) ?? 0);
+    .map(([, v]) => notaPonderada(v) ?? 0);
 
   return (
     <>
@@ -215,17 +220,12 @@ export default async function DuvidasPage({
                 {g.dias >= 3 && <span className="tag t-duvida">em {g.dias} dias diferentes</span>}
               </div>
               <h3>{g.titulo}</h3>
-              {g.resposta && (
-                <div className="porque">
-                  <b>Resposta{g.respondidaPor ? ` (${g.respondidaPor === "equipe" ? "equipe" : "colegas"})` : ""}:</b>{" "}
-                  {g.resposta}
-                </div>
-              )}
-              {g.status !== "resolvida" && g.sugestao && (
-                <div className="sugestao">
-                  <b>Sugestão para a equipe:</b> {g.sugestao}
-                </div>
-              )}
+              <Duvida
+                pergunta={g.pergunta}
+                resposta={g.respostaItem}
+                sugestao={g.sugestao}
+                mostrarSugestao={g.status !== "resolvida"}
+              />
             </div>
           ))}
         </div>
@@ -234,8 +234,8 @@ export default async function DuvidasPage({
           <div className="card">
             <h2 className="h2">Qualidade da mentoria</h2>
             <p className="sub">
-              Notas de 0 a 10, calculadas pela proporção de elogios e críticas ditas pelos alunos. Servem para ver a
-              direção, não são uma pesquisa.
+              Nota de 0 a 10 = 10 × elogios ÷ (elogios + críticas) que os alunos fizeram sobre cada assunto. Quem foi
+              mais citado pesa mais. Servem para ver a direção, não são uma pesquisa.
             </p>
             {porDimensao.length === 0 && <p className="sub" style={{ marginTop: 12 }}>Sem notas no período.</p>}
             {porDimensao.map((d) => (
@@ -265,7 +265,7 @@ export default async function DuvidasPage({
                 <Linha valores={experienciaPorDia} altura={100} rotulo="Nota média de experiência por dia" />
               </div>
               <p className="sub" style={{ marginTop: 8 }}>
-                Média das notas de cada dia. Olhe a direção da linha, não o valor isolado.
+                Nota de cada dia, com todas as menções. Olhe a direção da linha, não o valor isolado.
               </p>
             </div>
           )}

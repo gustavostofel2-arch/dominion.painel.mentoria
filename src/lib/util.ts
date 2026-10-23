@@ -59,6 +59,13 @@ export function media(valores: number[]): number | null {
   return valores.length ? soma(valores) / valores.length : null;
 }
 
+/** Nota de 0 a 10 pelas menções reais: 10 x positivas / (positivas + negativas). Quem foi mais citado pesa mais. */
+export function notaPonderada(linhas: { positivas: number; negativas: number }[]): number | null {
+  const pos = soma(linhas.map((l) => l.positivas));
+  const neg = soma(linhas.map((l) => l.negativas));
+  return pos + neg > 0 ? (10 * pos) / (pos + neg) : null;
+}
+
 export function mediana(valores: number[]): number | null {
   if (!valores.length) return null;
   const ordenado = [...valores].sort((a, b) => a - b);

@@ -14,6 +14,7 @@ import {
   diaMesCurto,
   media,
   milhar,
+  notaPonderada,
   numero,
   periodoPorExtenso,
   soma,
@@ -127,7 +128,7 @@ export default async function RelatoriosPage({
           }));
 
   const notas = [...agrupar(qualidade.filter((q) => q.nota !== null), (q) => q.dimensao).entries()].map(
-    ([nome, v]) => ({ nome, nota: media(v.map((q) => Number(q.nota))) ?? 0 }),
+    ([nome, v]) => ({ nome, nota: notaPonderada(v) ?? 0 }),
   );
 
   const c = selecionado.conteudo ?? {};

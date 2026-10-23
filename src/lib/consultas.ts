@@ -157,6 +157,11 @@ export type InsightComDia = {
   respondida_por: Insight["respondida_por"];
   resposta_resumo: string | null;
   sugestao: string | null;
+  pergunta_texto: string | null;
+  resposta_texto: string | null;
+  tempo_resposta_min: number | null;
+  pergunta_autor: { nome: string } | null;
+  resposta_autor: { nome: string; eh_equipe: boolean } | null;
   tema_id: string | null;
   temas: { id: string; nome: string } | null;
   dias: { data: string; grupo_id: string };
@@ -172,7 +177,7 @@ export async function obterInsightsPeriodo(
   let consulta = supabase
     .from("insights")
     .select(
-      "tipo, titulo, descricao, por_que, qtd_alunos, qtd_mencoes, intensidade, status, respondida_por, resposta_resumo, sugestao, tema_id, temas(id, nome), dias!inner(data, grupo_id)",
+      "tipo, titulo, descricao, por_que, qtd_alunos, qtd_mencoes, intensidade, status, respondida_por, resposta_resumo, sugestao, pergunta_texto, resposta_texto, tempo_resposta_min, pergunta_autor:participantes!pergunta_autor_id(nome), resposta_autor:participantes!resposta_autor_id(nome, eh_equipe), tema_id, temas(id, nome), dias!inner(data, grupo_id)",
     )
     .eq("dias.grupo_id", grupoId)
     .gte("dias.data", desde)
@@ -239,13 +244,15 @@ export async function obterQualidadePeriodo(
 ) {
   const { data } = await supabase
     .from("qualidade_dia")
-    .select("dimensao, nota, dias!inner(data, grupo_id)")
+    .select("dimensao, nota, positivas, negativas, dias!inner(data, grupo_id)")
     .eq("dias.grupo_id", grupoId)
     .gte("dias.data", desde)
     .lte("dias.data", ate);
   return (data ?? []) as unknown as {
     dimensao: string;
     nota: number | null;
+    positivas: number;
+    negativas: number;
     dias: { data: string };
   }[];
 }
@@ -273,6 +280,54 @@ export async function obterAtividadePeriodo(
     participantes: { id: string; nome: string; eh_equipe: boolean } | null;
     dias: { data: string };
   }[];
+}
+
+// ---------- Alunos insatisfeitos ----------
+
+export async function obterAlertasPeriodo(
+  supabase: SupabaseClient,
+  grupoId: string,
+  desde: string,
+  ate: string,
+) {
+  const { data } = await supabase
+    .from("alertas_alunos")
+    .select("nivel, motivo, citacao, participantes(id, nome), dias!inner(data, grupo_id)")
+    .eq("dias.grupo_id", grupoId)
+    .gte("dias.data", desde)
+    .lte("dias.data", ate);
+  return (data ?? []) as unknown as {
+    nivel: number;
+    motivo: string;
+    citacao: string | null;
+    participantes: { id: string; nome: string } | null;
+    dias: { data: string };
+  }[];
+}
+
+/** Um item por aluno: o nível mais alto do período, o motivo mais recente desse nível e em quantos dias apareceu. */
+export function resumirAlertas(
+  linhas: Awaited<ReturnType<typeof obterAlertasPeriodo>>,
+  nomeDe: (nome: string) => string = (n) => n,
+) {
+  const porAluno = new Map<string, typeof linhas>();
+  for (const l of linhas) {
+    if (!l.participantes) continue;
+    porAluno.set(l.participantes.id, [...(porAluno.get(l.participantes.id) ?? []), l]);
+  }
+  return [...porAluno.entries()]
+    .map(([id, lista]) => {
+      const ordem = [...lista].sort((a, b) => b.nivel - a.nivel || b.dias.data.localeCompare(a.dias.data));
+      return {
+        id,
+        nome: nomeDe(ordem[0].participantes!.nome),
+        nivel: ordem[0].nivel,
+        dias: new Set(lista.map((l) => l.dias.data)).size,
+        motivo: ordem[0].motivo,
+        citacao: ordem[0].citacao,
+      };
+    })
+    .sort((a, b) => b.nivel - a.nivel || b.dias - a.dias);
 }
 
 // ---------- Relatórios ----------

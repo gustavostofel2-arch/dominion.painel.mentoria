@@ -5,6 +5,7 @@ import { criarClienteServidor } from "@/lib/supabase/server";
 import { dataPorExtenso, obterGrupo, rotuloTipo, type Insight } from "@/lib/dados";
 import { obterDia } from "@/lib/consultas";
 import { milhar, numero } from "@/lib/util";
+import Duvida from "@/components/Duvida";
 
 export const dynamic = "force-dynamic";
 
@@ -154,22 +155,10 @@ export default async function ResumoDoDia({ params }: { params: Promise<{ data: 
               >
                 {d.status === "resolvida" ? "Resolvida" : d.status === "divergente" ? "Divergente" : "Em aberto"}
               </span>
-              <span>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <b>{d.titulo}</b>
-                {d.resposta_resumo && (
-                  <>
-                    <br />
-                    {d.resposta_resumo}
-                    {d.respondida_por ? ` (${d.respondida_por === "equipe" ? "equipe" : "colegas"})` : ""}
-                  </>
-                )}
-                {d.status !== "resolvida" && d.sugestao && (
-                  <>
-                    <br />
-                    <span style={{ color: "#ffcf7a" }}>Sugestão: {d.sugestao}</span>
-                  </>
-                )}
-              </span>
+                <Duvida pergunta={d} resposta={d} sugestao={d.sugestao} mostrarSugestao={d.status !== "resolvida"} />
+              </div>
             </div>
           ))}
         </div>

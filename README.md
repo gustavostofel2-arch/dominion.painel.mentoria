@@ -3,8 +3,17 @@
 Painel web (Next.js + Supabase + Vercel) para ver, dia a dia, o que os alunos falam no grupo:
 dores, dúvidas, desejos, elogios, qualidade da mentoria e alunos que mais ajudam.
 
-**Privacidade:** o sistema não guarda as mensagens dos alunos, só o que a IA extraiu delas
-(temas, contagens e notas) e contagens por aluno.
+**Privacidade:** o sistema não guarda o histórico de mensagens do grupo. Guarda o que a IA extraiu (temas,
+contagens e notas), contagens por aluno e, só para as dúvidas e os alertas, o texto da pergunta do aluno, a
+resposta que ele recebeu e uma citação curta de quem está insatisfeito, com o nome de quem escreveu.
+Tudo fica atrás do login (só quem está em `membros_painel` lê). Avise os alunos nos termos da mentoria (LGPD).
+
+**Como as medidas são calculadas** (critérios no prompt do `resumo-telegram`):
+- **Clima:** a IA conta as mensagens de alunos (sem a equipe) em positivas, neutras e negativas.
+- **Experiência:** a IA conta, em 5 dimensões, as menções positivas/negativas dos alunos; a nota é
+  10 × positivas ÷ (positivas + negativas), somando todas as menções do período.
+- **Dúvidas:** pergunta e resposta vêm do texto real das mensagens; a IA só aponta quais mensagens são.
+- **Alunos para acompanhar:** a IA aponta quem reclama ou demonstra frustração, com nível de 1 a 3.
 
 ## Estado atual
 

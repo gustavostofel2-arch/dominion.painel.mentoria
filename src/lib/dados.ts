@@ -22,7 +22,7 @@ export const DIA_COLS =
   "id, data, n_mensagens, n_participantes, msgs_por_hora, clima_positivo, clima_neutro, clima_negativo, frase, visao_geral, tempo_resposta_min, nivel";
 
 export const INSIGHT_COLS =
-  "id, tipo, titulo, descricao, por_que, qtd_alunos, qtd_mencoes, intensidade, status, respondida_por, resposta_resumo, sugestao";
+  "id, tipo, titulo, descricao, por_que, qtd_alunos, qtd_mencoes, intensidade, status, respondida_por, resposta_resumo, sugestao, pergunta_texto, resposta_texto, tempo_resposta_min, pergunta_autor:participantes!pergunta_autor_id(nome), resposta_autor:participantes!resposta_autor_id(nome, eh_equipe)";
 
 export type Insight = {
   id: string;
@@ -38,6 +38,11 @@ export type Insight = {
   respondida_por: "equipe" | "colegas" | null;
   resposta_resumo: string | null;
   sugestao: string | null;
+  pergunta_texto: string | null;
+  resposta_texto: string | null;
+  tempo_resposta_min: number | null;
+  pergunta_autor: { nome: string } | null;
+  resposta_autor: { nome: string; eh_equipe: boolean } | null;
 };
 
 export type Qualidade = { dimensao: string; nota: number | null };
@@ -129,7 +134,7 @@ export async function obterVisaoGeral(
   return {
     dia,
     diaAnterior: lista[1] ?? null,
-    insights: (insights.data ?? []) as Insight[],
+    insights: (insights.data ?? []) as unknown as Insight[],
     qualidade: (qualidade.data ?? []) as Qualidade[],
     atividade: (atividade.data ?? []) as unknown as Atividade[],
     acoes: (acoes.data ?? []) as Acao[],

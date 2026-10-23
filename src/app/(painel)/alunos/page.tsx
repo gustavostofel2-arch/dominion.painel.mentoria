@@ -1,10 +1,13 @@
 import Link from "next/link";
+import AlertasAlunos from "@/components/AlertasAlunos";
 import { criarClienteServidor } from "@/lib/supabase/server";
 import { iniciais, obterGrupo } from "@/lib/dados";
 import {
+  obterAlertasPeriodo,
   obterAtividadePeriodo,
   obterDiasPeriodo,
   obterInsightsPeriodo,
+  resumirAlertas,
   ultimoDia,
 } from "@/lib/consultas";
 import { agrupar, mediana, milhar, soma, somarDias } from "@/lib/util";
@@ -33,10 +36,11 @@ export default async function AlunosPage({
   }
 
   const desde = somarDias(ultima, -(janela - 1));
-  const [atividade, duvidas, dias] = await Promise.all([
+  const [atividade, duvidas, dias, alertasBrutos] = await Promise.all([
     obterAtividadePeriodo(supabase, grupo.id, desde, ultima),
     obterInsightsPeriodo(supabase, grupo.id, desde, ultima, "duvida"),
     obterDiasPeriodo(supabase, grupo.id, desde, ultima),
+    obterAlertasPeriodo(supabase, grupo.id, desde, ultima),
   ]);
   const exemplo = grupo.nome.includes("(EXEMPLO)");
 
@@ -87,6 +91,7 @@ export default async function AlunosPage({
   }).length;
 
   const nomeDe = (nome: string) => (mostrarNomes ? nome : `${iniciais(nome)}.`);
+  const alertas = resumirAlertas(alertasBrutos, nomeDe);
   const base = `/alunos?dias=${janela}`;
 
   return (
@@ -108,6 +113,8 @@ export default async function AlunosPage({
           </div>
         </div>
       </div>
+
+      {alertas.length > 0 && <AlertasAlunos alertas={alertas} />}
 
       <section className="row dois-um" style={{ alignItems: "flex-start" }}>
         <div className="card" style={{ flex: "2 1 560px", minWidth: 0 }}>
