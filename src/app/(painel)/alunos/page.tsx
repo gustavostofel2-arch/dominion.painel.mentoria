@@ -16,12 +16,13 @@ import { agrupar, mediana, milhar, soma } from "@/lib/util";
 
 export const dynamic = "force-dynamic";
 
+const POR_PAGINA = 10;
 const COLUNAS = "44px minmax(0, 2.2fr) 84px 84px 76px 116px 80px 60px 70px";
 
 export default async function AlunosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ periodo?: string; de?: string; ate?: string; dias?: string; nomes?: string }>;
+  searchParams: Promise<{ periodo?: string; de?: string; ate?: string; dias?: string; nomes?: string; pagina?: string }>;
 }) {
   const params = await searchParams;
   const mostrarNomes = params.nomes !== "0";
@@ -52,6 +53,12 @@ export default async function AlunosPage({
   const alertas = resumirAlertas(alertasBrutos, nomeDe);
   const extra = mostrarNomes ? "" : "nomes=0";
   const consulta = `${periodo.consulta}${extra ? `&${extra}` : ""}`;
+
+  const totalPaginas = Math.max(1, Math.ceil(ranking.length / POR_PAGINA));
+  const pagina = Math.min(totalPaginas, Math.max(1, Number.parseInt(params.pagina ?? "1", 10) || 1));
+  const inicioPagina = (pagina - 1) * POR_PAGINA;
+  const daPagina = ranking.slice(inicioPagina, inicioPagina + POR_PAGINA);
+  const linkPagina = (n: number) => `/alunos?${consulta}&pagina=${n}`;
 
   const pontuados = ranking.filter((r) => r.pontos > 0);
   const podio = pontuados.slice(0, 3);
@@ -127,6 +134,10 @@ export default async function AlunosPage({
               <div className="sub">
                 {p.resolveu} resolveu · {p.ajudas} {p.ajudas === 1 ? "ajuda" : "ajudas"} · {p.contribuicoes} {p.contribuicoes === 1 ? "contribuição" : "contribuições"} · {p.duvidas} {p.duvidas === 1 ? "dúvida" : "dúvidas"}
               </div>
+              <div className="conta" title="Como os pontos foram somados">
+                {p.resolveu}×{PESOS.resolveu} + {p.ajudas}×{PESOS.ajuda} + {p.contribuicoes}×{PESOS.contribuicao} +{" "}
+                {p.duvidas}×{PESOS.duvida} = {p.pontos}
+              </div>
               <div className="sub">
                 ativo em {p.diasAtivos} {p.diasAtivos === 1 ? "dia" : "dias"}
               </div>
@@ -148,6 +159,38 @@ export default async function AlunosPage({
           </Link>
         </div>
 
+        <div className="regra">
+          <div>
+            <b>Pontos</b> = Resolveu ×{PESOS.resolveu} + Ajudas ×{PESOS.ajuda} + Contribuições ×{PESOS.contribuicao} +
+            Dúvidas ×{PESOS.duvida}
+          </div>
+          <details>
+            <summary>Ver o que cada coluna significa</summary>
+            <ul>
+              <li>
+                <b>Resolveu (×{PESOS.resolveu}):</b> resposta que resolveu a dúvida de um colega.
+              </li>
+              <li>
+                <b>Ajudas (×{PESOS.ajuda}):</b> resposta que ajudou um colega, mesmo sem resolver tudo.
+              </li>
+              <li>
+                <b>Contribuições (×{PESOS.contribuicao}):</b> dica, resultado ou aprendizado útil ao grupo.
+              </li>
+              <li>
+                <b>Dúvidas (×{PESOS.duvida}):</b> pergunta clara e específica.
+              </li>
+              <li>
+                <b>Dias e Msgs:</b> só informação (dias em que participou e total de mensagens). Não dão pontos.
+              </li>
+            </ul>
+            <p>
+              A IA lê o grupo todo dia e marca só mensagens de alunos que são interação de verdade. “kkk”, “ok”,
+              “valeu” sozinho e spam não contam. Em caso de empate: quem mais resolveu, depois quem mais ajudou, depois
+              quem ficou ativo em mais dias.
+            </p>
+          </details>
+        </div>
+
         <div className="rolagem" style={{ marginTop: 10 }}>
           <div className="tabela" style={{ minWidth: 900 }}>
             <div className="tr cab" style={{ gridTemplateColumns: COLUNAS }}>
@@ -166,10 +209,13 @@ export default async function AlunosPage({
                 Sem atividade de alunos neste período.
               </p>
             )}
-            {ranking.map((p, i) => (
+            {daPagina.map((p, i) => (
               <Link href={detalhe(p.id)} className="tr tr-aluno" key={p.id} style={{ gridTemplateColumns: COLUNAS }}>
-                <span className={i < 3 && p.pontos > 0 ? "num posicao-mini top" : "num posicao-mini"} data-l="Posição">
-                  {i + 1}
+                <span
+                  className={inicioPagina + i < 3 && p.pontos > 0 ? "num posicao-mini top" : "num posicao-mini"}
+                  data-l="Posição"
+                >
+                  {inicioPagina + i + 1}
                 </span>
                 <div>
                   <b>{nomeDe(p.nome)}</b>
@@ -202,6 +248,28 @@ export default async function AlunosPage({
             ))}
           </div>
         </div>
+        {ranking.length > POR_PAGINA && (
+          <nav className="paginacao" aria-label="Páginas do ranking">
+            {pagina > 1 ? (
+              <Link href={linkPagina(pagina - 1)} className="chip">
+                ← Anterior
+              </Link>
+            ) : (
+              <span className="chip off">← Anterior</span>
+            )}
+            <span className="sub" style={{ margin: 0 }}>
+              {inicioPagina + 1}–{Math.min(inicioPagina + POR_PAGINA, ranking.length)} de {ranking.length} alunos · página{" "}
+              {pagina} de {totalPaginas}
+            </span>
+            {pagina < totalPaginas ? (
+              <Link href={linkPagina(pagina + 1)} className="chip">
+                Próxima →
+              </Link>
+            ) : (
+              <span className="chip off">Próxima →</span>
+            )}
+          </nav>
+        )}
         <p className="sub" style={{ marginTop: 12 }}>
           Clique em um aluno para ver cada interação que gerou pontos.
         </p>

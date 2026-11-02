@@ -309,3 +309,27 @@ a.tr:hover { background: var(--cinza); }
   .tr .posicao-mini::before { content: "#"; font-weight: 600; }
   .tr .destaque-num::before { color: var(--suave); }
 }
+
+/* Filtro de período alinhado: tudo com a mesma altura e na mesma linha */
+.seletor-periodo { align-items: flex-end; }
+.seletor-periodo .pills { height: 44px; align-items: center; }
+.periodo-form input[type="date"] { height: 44px; min-height: 44px; padding: 0 12px; }
+.periodo-form .botao { height: 44px; min-height: 44px; padding-top: 0; padding-bottom: 0; }
+.periodo-form label { gap: 6px; }
+.seletor-periodo > .sub { margin-top: 0; }
+
+.conta { font-family: var(--mono); font-size: 12px; color: var(--marca); margin-top: 4px; }
+.regra { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: var(--cinza); border: 1px solid var(--borda); font-size: 13.5px; line-height: 1.6; color: #d8d6d0; }
+.regra summary { cursor: pointer; color: var(--marca); font-weight: 700; margin-top: 6px; }
+.regra ul { margin: 8px 0 0; padding-left: 18px; }
+.regra li { margin-top: 4px; }
+.regra p { margin: 8px 0 0; color: var(--suave); }
+.paginacao { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; justify-content: space-between; margin-top: 14px; }
+.chip.off { opacity: 0.4; pointer-events: none; }
+@media (max-width: 900px) {
+  .seletor-periodo { align-items: stretch; }
+  .seletor-periodo .pills { height: auto; min-height: 44px; }
+  .periodo-form { align-items: flex-end; }
+  .paginacao { justify-content: space-between; }
+  .paginacao .sub { order: 3; flex-basis: 100%; text-align: center; }
+}
