@@ -13,6 +13,10 @@ Tudo fica atrás do login (só quem está em `membros_painel` lê). Avise os alu
 - **Experiência:** a IA conta, em 5 dimensões, as menções positivas/negativas dos alunos; a nota é
   10 × positivas ÷ (positivas + negativas), somando todas as menções do período.
 - **Dúvidas:** pergunta e resposta vêm do texto real das mensagens; a IA só aponta quais mensagens são.
+- **Ranking de alunos / competição:** a IA marca, todo dia, as mensagens de alunos que são interação válida
+  (resolveu a dúvida de um colega = 5 pontos, ajudou = 3, contribuiu com o grupo = 2, dúvida válida = 1).
+  A tela Alunos soma por período (7 dias, 30 dias, competição ou datas personalizadas) e mostra a prova de cada
+  ponto. As datas da competição ficam em `src/lib/ranking.ts`. Exige `supabase/migracao-005.sql`.
 - **Alunos para acompanhar:** a IA aponta quem reclama ou demonstra frustração, com nível de 1 a 3.
 
 ## Estado atual

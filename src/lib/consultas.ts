@@ -282,6 +282,24 @@ export async function obterAtividadePeriodo(
   }[];
 }
 
+// ---------- Equipe ----------
+
+export async function obterEquipePeriodo(
+  supabase: SupabaseClient,
+  grupoId: string,
+  desde: string,
+  ate: string,
+) {
+  const { data } = await supabase
+    .from("atividade_dia")
+    .select("mensagens, respostas_uteis, participantes!inner(eh_equipe), dias!inner(data, grupo_id)")
+    .eq("participantes.eh_equipe", true)
+    .eq("dias.grupo_id", grupoId)
+    .gte("dias.data", desde)
+    .lte("dias.data", ate);
+  return (data ?? []) as unknown as { mensagens: number; respostas_uteis: number }[];
+}
+
 // ---------- Alunos insatisfeitos ----------
 
 export async function obterAlertasPeriodo(

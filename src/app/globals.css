@@ -281,3 +281,31 @@ a.tr:hover { background: var(--cinza); }
 .citacao .quem { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: var(--suave); margin-bottom: 4px; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
 .citacao.resp { border-left-color: var(--ok); }
 .citacao.resp.equipe { border-left-color: var(--marca); }
+
+/* Alunos: período, competição, pódio e ranking */
+.seletor-periodo { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; }
+.periodo-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.periodo-form label { display: flex; flex-direction: column; gap: 4px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--suave); }
+.periodo-form input[type="date"] { font: inherit; text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--tinta); padding: 9px 10px; border-radius: 10px; border: 1px solid var(--borda); background: var(--cinza); color-scheme: dark; min-height: 40px; }
+.periodo-form .botao { min-height: 40px; }
+.podio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.podio-item { display: flex; flex-direction: column; gap: 4px; transition: border-color 0.15s; }
+.podio-item:hover { border-color: var(--marca); }
+.podio-item.lugar-1 { background: linear-gradient(135deg, #2b2010 0%, var(--superficie) 70%); border-color: rgba(255, 176, 32, 0.45); }
+.posicao { font-family: var(--display); font-size: 14px; color: var(--marca); }
+.podio-nome { font-weight: 800; font-size: 17px; margin-top: 2px; }
+.unidade { font-family: var(--fonte), sans-serif; font-size: 13px; color: var(--suave); font-weight: 600; letter-spacing: 0; }
+.posicao-mini { text-align: center !important; color: var(--suave); font-family: var(--mono); font-weight: 500; }
+.posicao-mini.top { color: var(--marca); }
+.destaque-num { color: var(--marca); }
+@media (max-width: 900px) {
+  .podio { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .periodo-form { width: 100%; }
+  .periodo-form label { flex: 1 1 120px; }
+}
+@media (max-width: 640px) {
+  .tr > .posicao-mini { flex: none; min-width: 28px; }
+  .tr.tr-aluno > div:nth-child(2) { flex: 1 1 calc(100% - 52px); }
+  .tr .posicao-mini::before { content: "#"; font-weight: 600; }
+  .tr .destaque-num::before { color: var(--suave); }
+}

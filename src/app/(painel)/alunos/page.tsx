@@ -1,27 +1,30 @@
 import Link from "next/link";
 import AlertasAlunos from "@/components/AlertasAlunos";
+import SeletorPeriodo from "@/components/SeletorPeriodo";
 import { criarClienteServidor } from "@/lib/supabase/server";
 import { iniciais, obterGrupo } from "@/lib/dados";
 import {
   obterAlertasPeriodo,
-  obterAtividadePeriodo,
   obterDiasPeriodo,
+  obterEquipePeriodo,
   obterInsightsPeriodo,
   resumirAlertas,
   ultimoDia,
 } from "@/lib/consultas";
-import { agrupar, mediana, milhar, soma, somarDias } from "@/lib/util";
+import { COMPETICAO, PESOS, dataBr, diasEntre, obterRanking, resolverPeriodo } from "@/lib/ranking";
+import { agrupar, mediana, milhar, soma } from "@/lib/util";
 
 export const dynamic = "force-dynamic";
+
+const COLUNAS = "44px minmax(0, 2.2fr) 84px 84px 76px 116px 80px 60px 70px";
 
 export default async function AlunosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dias?: string; nomes?: string }>;
+  searchParams: Promise<{ periodo?: string; de?: string; ate?: string; dias?: string; nomes?: string }>;
 }) {
-  const { dias: diasParam, nomes: nomesParam } = await searchParams;
-  const janela = diasParam === "30" ? 30 : 7;
-  const mostrarNomes = nomesParam !== "0";
+  const params = await searchParams;
+  const mostrarNomes = params.nomes !== "0";
 
   const supabase = await criarClienteServidor();
   const grupo = await obterGrupo(supabase);
@@ -35,139 +38,208 @@ export default async function AlunosPage({
     );
   }
 
-  const desde = somarDias(ultima, -(janela - 1));
-  const [atividade, duvidas, dias, alertasBrutos] = await Promise.all([
-    obterAtividadePeriodo(supabase, grupo.id, desde, ultima),
-    obterInsightsPeriodo(supabase, grupo.id, desde, ultima, "duvida"),
-    obterDiasPeriodo(supabase, grupo.id, desde, ultima),
-    obterAlertasPeriodo(supabase, grupo.id, desde, ultima),
+  const periodo = resolverPeriodo(params, ultima);
+  const [ranking, equipeAtividade, duvidas, dias, alertasBrutos] = await Promise.all([
+    obterRanking(supabase, grupo.id, periodo.desde, periodo.ate),
+    obterEquipePeriodo(supabase, grupo.id, periodo.desde, periodo.ate),
+    obterInsightsPeriodo(supabase, grupo.id, periodo.desde, periodo.ate, "duvida"),
+    obterDiasPeriodo(supabase, grupo.id, periodo.desde, periodo.ate),
+    obterAlertasPeriodo(supabase, grupo.id, periodo.desde, periodo.ate),
   ]);
   const exemplo = grupo.nome.includes("(EXEMPLO)");
 
-  const pessoas = [
-    ...agrupar(
-      atividade.filter((a) => a.participantes),
-      (a) => a.participantes!.id,
-    ).values(),
-  ].map((lista) => ({
-    id: lista[0].participantes!.id,
-    nome: lista[0].participantes!.nome,
-    equipe: lista[0].participantes!.eh_equipe,
-    mensagens: soma(lista.map((l) => l.mensagens)),
-    respostas: soma(lista.map((l) => l.respostas_uteis)),
-    duvidas: soma(lista.map((l) => l.duvidas)),
-  }));
+  const nomeDe = (nome: string) => (mostrarNomes ? nome : `${iniciais(nome)}.`);
+  const alertas = resumirAlertas(alertasBrutos, nomeDe);
+  const extra = mostrarNomes ? "" : "nomes=0";
+  const consulta = `${periodo.consulta}${extra ? `&${extra}` : ""}`;
 
-  const alunos = pessoas.filter((p) => !p.equipe).sort((a, b) => b.mensagens - a.mensagens);
-  const equipe = pessoas.filter((p) => p.equipe);
-  const ranking = alunos.slice(0, 10);
-  const maxMsgs = Math.max(...ranking.map((p) => p.mensagens), 1);
+  const pontuados = ranking.filter((r) => r.pontos > 0);
+  const podio = pontuados.slice(0, 3);
+  const maxPontos = Math.max(...ranking.map((r) => r.pontos), 1);
 
-  const topAjuda = [...alunos].sort((a, b) => b.respostas - a.respostas)[0]?.id;
-  const topAtivo = alunos[0]?.id;
-  const topPergunta = [...alunos].sort((a, b) => b.duvidas - a.duvidas)[0]?.id;
-  const selo = (id: string) =>
-    id === topAjuda
-      ? { texto: "Ajuda mais", classe: "t-elogio" }
-      : id === topAtivo
-        ? { texto: "Mais ativo", classe: "t-duvida" }
-        : id === topPergunta
-          ? { texto: "Pergunta muito", classe: "t-desejo" }
-          : null;
+  // Competição: em que dia estamos
+  const totalDiasComp = diasEntre(COMPETICAO.inicio, COMPETICAO.fim);
+  const diaAtualComp = Math.min(totalDiasComp, Math.max(0, diasEntre(COMPETICAO.inicio, ultima)));
+  const pctComp = Math.round((diaAtualComp / totalDiasComp) * 100);
 
-  const msgsEquipe = soma(equipe.map((e) => e.mensagens));
-  const respostasEquipe = soma(equipe.map((e) => e.respostas));
+  // Equipe e suporte
+  const msgsEquipe = soma(equipeAtividade.map((e) => e.mensagens));
+  const respostasEquipe = soma(equipeAtividade.map((e) => e.respostas_uteis));
   const tempo = mediana(dias.map((d) => d.tempo_resposta_min).filter((n): n is number => n !== null));
-
   const resolvidas = duvidas.filter((d) => d.status === "resolvida");
   const porEquipe = resolvidas.filter((d) => d.respondida_por === "equipe").length;
   const porColegas = resolvidas.filter((d) => d.respondida_por === "colegas").length;
   const totalQuem = porEquipe + porColegas;
   const pctEquipe = totalQuem ? Math.round((porEquipe / totalQuem) * 100) : 0;
-
   const abertas = [...agrupar(duvidas, (d) => d.temas?.id ?? d.titulo).values()].filter((lista) => {
     const ultimo = [...lista].sort((a, b) => b.dias.data.localeCompare(a.dias.data))[0];
     return ultimo.status !== "resolvida";
   }).length;
 
-  const nomeDe = (nome: string) => (mostrarNomes ? nome : `${iniciais(nome)}.`);
-  const alertas = resumirAlertas(alertasBrutos, nomeDe);
-  const base = `/alunos?dias=${janela}`;
+  const detalhe = (id: string) => `/alunos/${id}?${consulta}`;
 
   return (
     <>
       <div className="top">
         <div>
           <h1 className="titulo">Alunos</h1>
-          <p className="sub">Quem mais participa e quem mais ajuda. Só contagens: nenhuma mensagem é guardada.</p>
+          <p className="sub">
+            Quem mais participa de verdade, ajuda e resolve problemas dos colegas. Só contam interações válidas (nada de
+            “kkk” ou “ok”).
+          </p>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-          {exemplo && <span className="demo">Dados de exemplo</span>}
-          <div className="pills">
-            <Link className={janela === 7 ? "pill on" : "pill"} href={`/alunos?dias=7${mostrarNomes ? "" : "&nomes=0"}`}>
-              7 dias
+        {exemplo && <span className="demo">Dados de exemplo</span>}
+      </div>
+
+      <SeletorPeriodo periodo={periodo} caminho="/alunos" extra={extra} />
+
+      {periodo.chave === "comp" && (
+        <section className="card destaque">
+          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+            <span className="lbl">{COMPETICAO.nome}</span>
+            <span className="lbl">
+              {diaAtualComp === 0
+                ? "ainda não começou"
+                : `dia ${diaAtualComp} de ${totalDiasComp} · termina em ${dataBr(COMPETICAO.fim)}`}
+            </span>
+          </div>
+          <div className="medidor" style={{ height: 12 }}>
+            <i style={{ width: `${pctComp}%`, background: "var(--marca)" }} />
+          </div>
+          {pontuados[0] && (
+            <p style={{ marginTop: 12, fontSize: 15 }}>
+              Líder agora: <b>{nomeDe(pontuados[0].nome)}</b> com <b>{milhar(pontuados[0].pontos)} pontos</b>
+              {pontuados[1] ? ` (${milhar(pontuados[0].pontos - pontuados[1].pontos)} à frente do 2º)` : ""}.
+            </p>
+          )}
+        </section>
+      )}
+
+      {podio.length > 0 && (
+        <section className="podio" aria-label="Pódio">
+          {podio.map((p, i) => (
+            <Link href={detalhe(p.id)} className={`card podio-item lugar-${i + 1}`} key={p.id}>
+              <div className="posicao">{i + 1}º</div>
+              <div className="podio-nome">{nomeDe(p.nome)}</div>
+              <div className="big">
+                {milhar(p.pontos)} <span className="unidade">pontos</span>
+              </div>
+              <div className="sub">
+                {p.resolveu} resolveu · {p.ajudas} {p.ajudas === 1 ? "ajuda" : "ajudas"} · {p.contribuicoes} {p.contribuicoes === 1 ? "contribuição" : "contribuições"} · {p.duvidas} {p.duvidas === 1 ? "dúvida" : "dúvidas"}
+              </div>
+              <div className="sub">
+                ativo em {p.diasAtivos} {p.diasAtivos === 1 ? "dia" : "dias"}
+              </div>
             </Link>
-            <Link className={janela === 30 ? "pill on" : "pill"} href={`/alunos?dias=30${mostrarNomes ? "" : "&nomes=0"}`}>
-              30 dias
-            </Link>
+          ))}
+        </section>
+      )}
+
+      <section className="card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+          <h2 className="h2">Ranking completo</h2>
+          <Link
+            href={`/alunos?${periodo.consulta}${mostrarNomes ? "&nomes=0" : ""}`}
+            className="chave"
+            aria-pressed={mostrarNomes}
+          >
+            <i className={mostrarNomes ? "lig" : ""} />
+            Mostrar nomes
+          </Link>
+        </div>
+
+        <div className="rolagem" style={{ marginTop: 10 }}>
+          <div className="tabela" style={{ minWidth: 900 }}>
+            <div className="tr cab" style={{ gridTemplateColumns: COLUNAS }}>
+              <span>#</span>
+              <span>Aluno</span>
+              <span style={{ textAlign: "right" }}>Pontos</span>
+              <span style={{ textAlign: "right" }}>Resolveu</span>
+              <span style={{ textAlign: "right" }}>Ajudas</span>
+              <span style={{ textAlign: "right" }}>Contribuições</span>
+              <span style={{ textAlign: "right" }}>Dúvidas</span>
+              <span style={{ textAlign: "right" }}>Dias</span>
+              <span style={{ textAlign: "right" }}>Msgs</span>
+            </div>
+            {ranking.length === 0 && (
+              <p className="sub" style={{ padding: 12 }}>
+                Sem atividade de alunos neste período.
+              </p>
+            )}
+            {ranking.map((p, i) => (
+              <Link href={detalhe(p.id)} className="tr tr-aluno" key={p.id} style={{ gridTemplateColumns: COLUNAS }}>
+                <span className={i < 3 && p.pontos > 0 ? "num posicao-mini top" : "num posicao-mini"} data-l="Posição">
+                  {i + 1}
+                </span>
+                <div>
+                  <b>{nomeDe(p.nome)}</b>
+                  <div className="medidor" style={{ height: 6, marginTop: 6 }}>
+                    <i style={{ width: `${(p.pontos / maxPontos) * 100}%`, background: "var(--marca)" }} />
+                  </div>
+                </div>
+                <span className="num destaque-num" data-l="Pontos">
+                  {milhar(p.pontos)}
+                </span>
+                <span className="num" data-l="Resolveu">
+                  {p.resolveu}
+                </span>
+                <span className="num" data-l="Ajudas">
+                  {p.ajudas}
+                </span>
+                <span className="num" data-l="Contribuições">
+                  {p.contribuicoes}
+                </span>
+                <span className="num" data-l="Dúvidas">
+                  {p.duvidas}
+                </span>
+                <span className="num" data-l="Dias ativos">
+                  {p.diasAtivos}
+                </span>
+                <span className="num" data-l="Mensagens">
+                  {milhar(p.mensagens)}
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
-      </div>
+        <p className="sub" style={{ marginTop: 12 }}>
+          Clique em um aluno para ver cada interação que gerou pontos.
+        </p>
+      </section>
 
       {alertas.length > 0 && <AlertasAlunos alertas={alertas} />}
 
       <section className="row dois-um" style={{ alignItems: "flex-start" }}>
-        <div className="card" style={{ flex: "2 1 560px", minWidth: 0 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-            <h2 className="h2">Ranking do período</h2>
-            <Link href={mostrarNomes ? `${base}&nomes=0` : base} className="chave" aria-pressed={mostrarNomes}>
-              <i className={mostrarNomes ? "lig" : ""} />
-              Mostrar nomes
-            </Link>
+        <div className="card">
+          <h2 className="h2">Como a pontuação funciona</h2>
+          <p className="sub">
+            A IA lê o grupo todo dia e marca as mensagens de alunos que são interação de verdade. Cada uma vale pontos
+            conforme o tipo. A equipe não entra no ranking.
+          </p>
+          <div className="kp">
+            <div className="lbl">Resolveu · {PESOS.resolveu} pontos</div>
+            <div className="sub">Resposta que resolveu a dúvida de um colega (completa e correta ou confirmada por ele).</div>
           </div>
-
-          <div className="rolagem" style={{ marginTop: 10 }}>
-            <div className="tabela" style={{ minWidth: 640 }}>
-              <div className="tr cab" style={{ gridTemplateColumns: "36px minmax(0,2fr) 90px 110px 80px 130px" }}>
-                <span />
-                <span>Aluno</span>
-                <span style={{ textAlign: "right" }}>Mensagens</span>
-                <span style={{ textAlign: "right" }}>Respostas úteis</span>
-                <span style={{ textAlign: "right" }}>Dúvidas</span>
-                <span>Destaque</span>
-              </div>
-              {ranking.length === 0 && <p className="sub" style={{ padding: 12 }}>Sem atividade no período.</p>}
-              {ranking.map((p) => {
-                const s = selo(p.id);
-                return (
-                  <div className="tr" key={p.id} style={{ gridTemplateColumns: "36px minmax(0,2fr) 90px 110px 80px 130px" }}>
-                    <div className="av" style={{ width: 36, height: 36 }}>
-                      {iniciais(p.nome)}
-                    </div>
-                    <div>
-                      <b>{nomeDe(p.nome)}</b>
-                      <div className="medidor" style={{ height: 8, marginTop: 6 }}>
-                        <i style={{ width: `${(p.mensagens / maxMsgs) * 100}%`, background: "var(--marca)" }} />
-                      </div>
-                    </div>
-                    <span className="num" data-l="Mensagens">
-                      {milhar(p.mensagens)}
-                    </span>
-                    <span className="num" data-l="Respostas úteis">
-                      {milhar(p.respostas)}
-                    </span>
-                    <span className="num" data-l="Dúvidas">
-                      {milhar(p.duvidas)}
-                    </span>
-                    <span>{s && <span className={`tag ${s.classe}`}>{s.texto}</span>}</span>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="kp">
+            <div className="lbl">Ajuda · {PESOS.ajuda} pontos</div>
+            <div className="sub">Resposta que ajuda um colega: explica, orienta ou indica o caminho.</div>
           </div>
+          <div className="kp">
+            <div className="lbl">Contribuição · {PESOS.contribuicao} pontos</div>
+            <div className="sub">Dica prática, resultado compartilhado com detalhes ou aprendizado útil ao grupo.</div>
+          </div>
+          <div className="kp">
+            <div className="lbl">Dúvida válida · {PESOS.duvida} ponto</div>
+            <div className="sub">Pergunta clara e específica. Quem pergunta bem também participa.</div>
+          </div>
+          <p className="sub" style={{ marginTop: 10 }}>
+            Não pontuam: risadas, “ok”, “valeu” sozinho, “não sei”, spam e conversa solta. Em empate, vence quem mais
+            resolveu, depois quem mais ajudou e depois quem esteve ativo em mais dias. Só vale a partir do dia em que a
+            IA já usa estes critérios.
+          </p>
         </div>
 
-        <div style={{ flex: "1 1 320px", minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
           <div className="card">
             <h2 className="h2">Equipe da mentoria</h2>
             <div className="kp">
@@ -213,14 +285,6 @@ export default async function AlunosPage({
                 Ver dúvidas em aberto
               </Link>
             )}
-          </div>
-
-          <div className="card" style={{ background: "var(--cinza)" }}>
-            <div className="lbl">Privacidade</div>
-            <p style={{ fontSize: 13, lineHeight: 1.6, marginTop: 6, color: "#d8d6d0" }}>
-              O painel guarda apenas números por aluno (mensagens, respostas e dúvidas). Com “Mostrar nomes”
-              desligado, aparecem só as iniciais.
-            </p>
           </div>
         </div>
       </section>
