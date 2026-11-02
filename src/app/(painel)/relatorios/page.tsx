@@ -40,9 +40,9 @@ function lista<T>(conteudo: Record<string, unknown>, chave: string): T[] {
 export default async function RelatoriosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tipo?: string; inicio?: string }>;
+  searchParams: Promise<{ tipo?: string; inicio?: string; data?: string }>;
 }) {
-  const { tipo: tipoParam, inicio: inicioParam } = await searchParams;
+  const { tipo: tipoParam, inicio: inicioParam, data: dataParam } = await searchParams;
   const tipo = tipoParam === "mensal" ? "mensal" : "semanal";
 
   const supabase = await criarClienteServidor();
@@ -59,7 +59,12 @@ export default async function RelatoriosPage({
 
   const relatorios = await listarRelatorios(supabase, grupo.id, tipo);
   const exemplo = grupo.nome.includes("(EXEMPLO)");
-  const selecionado = relatorios.find((r) => r.inicio === inicioParam) ?? relatorios[0] ?? null;
+  const dataPedida = dataParam && /^\d{4}-\d{2}-\d{2}$/.test(dataParam) ? dataParam : null;
+  const selecionado =
+    relatorios.find((r) => r.inicio === inicioParam) ??
+    (dataPedida ? relatorios.find((r) => r.inicio <= dataPedida && dataPedida <= r.fim) : undefined) ??
+    relatorios[0] ??
+    null;
 
   const cabecalho = (
     <div className="top">
@@ -71,6 +76,16 @@ export default async function RelatoriosPage({
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
         {exemplo && <span className="demo">Dados de exemplo</span>}
+        <form method="get" action="/relatorios" className="periodo-form">
+          <input type="hidden" name="tipo" value={tipo} />
+          <label>
+            <span>Relatório do dia</span>
+            <input type="date" name="data" defaultValue={dataPedida ?? selecionado?.fim ?? ultima} required />
+          </label>
+          <button type="submit" className="botao">
+            Abrir
+          </button>
+        </form>
         <div className="pills">
           <Link className={tipo === "semanal" ? "pill on" : "pill"} href="/relatorios?tipo=semanal">
             Semana
@@ -142,6 +157,13 @@ export default async function RelatoriosPage({
   return (
     <>
       {cabecalho}
+
+      {dataPedida && !relatorios.some((r) => r.inicio <= dataPedida && dataPedida <= r.fim) && (
+        <div className="aviso">
+          Não há relatório {tipo} que inclua {dataPedida.slice(8, 10)}/{dataPedida.slice(5, 7)}/{dataPedida.slice(0, 4)}.
+          Mostrando o mais recente.
+        </div>
+      )}
 
       <div className="chips">
         {relatorios.map((r) => (

@@ -91,6 +91,15 @@ export default async function HistoricoPage({
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
           {exemplo && <span className="demo">Dados de exemplo</span>}
+          <form method="get" action="/historico" className="periodo-form">
+            <label>
+              <span>Ir para o mês</span>
+              <input type="month" name="mes" defaultValue={mes} required />
+            </label>
+            <button type="submit" className="botao">
+              Abrir
+            </button>
+          </form>
           <div className="pills">
             <Link className="pill" href="/dia">
               Dia

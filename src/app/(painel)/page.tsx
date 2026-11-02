@@ -1,6 +1,7 @@
 import Link from "next/link";
 import GraficoHorario from "@/components/GraficoHorario";
 import AlertasAlunos from "@/components/AlertasAlunos";
+import SeletorPeriodo from "@/components/SeletorPeriodo";
 import { criarClienteServidor } from "@/lib/supabase/server";
 import { dataPorExtenso, iniciais, obterGrupo, rotuloTipo } from "@/lib/dados";
 import {
@@ -14,23 +15,17 @@ import {
   ultimoDia,
   type InsightComDia,
 } from "@/lib/consultas";
+import { diasEntre, resolverPeriodo } from "@/lib/ranking";
 import { agrupar, milhar, notaPonderada, numero, periodoPorExtenso, soma, somarDias, variacaoPct } from "@/lib/util";
 
 export const dynamic = "force-dynamic";
 
-const OPCOES = [
-  { dias: 1, rotulo: "Último dia" },
-  { dias: 7, rotulo: "7 dias" },
-  { dias: 30, rotulo: "30 dias" },
-];
-
 export default async function VisaoGeralPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dias?: string }>;
+  searchParams: Promise<{ periodo?: string; de?: string; ate?: string; dias?: string }>;
 }) {
-  const { dias: diasParam } = await searchParams;
-  const janela = diasParam === "30" ? 30 : diasParam === "7" ? 7 : 1;
+  const params = await searchParams;
 
   const supabase = await criarClienteServidor();
   const grupo = await obterGrupo(supabase);
@@ -57,15 +52,18 @@ export default async function VisaoGeralPage({
     );
   }
 
-  const desde = somarDias(ultima, -(janela - 1));
+  const periodo = resolverPeriodo(params, ultima, "1");
+  const desde = periodo.desde;
+  const fim = periodo.ate;
+  const janela = diasEntre(desde, fim);
   const antesDesde = somarDias(desde, -janela);
 
   const [diasTodos, insights, qualidade, atividade, alertasBrutos] = await Promise.all([
-    obterDiasCompletos(supabase, grupo.id, antesDesde, ultima),
-    obterInsightsPeriodo(supabase, grupo.id, desde, ultima),
-    obterQualidadePeriodo(supabase, grupo.id, desde, ultima),
-    obterAtividadePeriodo(supabase, grupo.id, desde, ultima),
-    obterAlertasPeriodo(supabase, grupo.id, desde, ultima),
+    obterDiasCompletos(supabase, grupo.id, antesDesde, fim),
+    obterInsightsPeriodo(supabase, grupo.id, desde, fim),
+    obterQualidadePeriodo(supabase, grupo.id, desde, fim),
+    obterAtividadePeriodo(supabase, grupo.id, desde, fim),
+    obterAlertasPeriodo(supabase, grupo.id, desde, fim),
   ]);
 
   const dias = diasTodos.filter((d) => d.data >= desde);
@@ -148,8 +146,8 @@ export default async function VisaoGeralPage({
   const unidade = janela === 1 ? "no dia" : `em ${janela} dias`;
   const quando =
     dias.length <= 1
-      ? dataPorExtenso(ultima)
-      : `${periodoPorExtenso(dias[0].data, ultima)} · ${dias.length} dias com dados`;
+      ? dataPorExtenso(dias[0]?.data ?? fim)
+      : `${periodoPorExtenso(dias[0].data, dias[dias.length - 1].data)} · ${dias.length} dias com dados`;
 
   return (
     <>
@@ -160,17 +158,10 @@ export default async function VisaoGeralPage({
             {quando} · {grupo.nome}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          {exemplo && <span className="demo">Dados de exemplo</span>}
-          <div className="pills">
-            {OPCOES.map((o) => (
-              <Link key={o.dias} href={`/?dias=${o.dias}`} className={janela === o.dias ? "pill on" : "pill"}>
-                {o.rotulo}
-              </Link>
-            ))}
-          </div>
-        </div>
+        {exemplo && <span className="demo">Dados de exemplo</span>}
       </div>
+
+      <SeletorPeriodo periodo={periodo} caminho="/" opcoes={["1", "7", "30"]} />
 
       {janela > 1 && dias.length < janela && (
         <div className="aviso">

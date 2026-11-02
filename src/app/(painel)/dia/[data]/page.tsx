@@ -104,7 +104,18 @@ export default async function ResumoDoDia({ params }: { params: Promise<{ data: 
             <span className="seta off">›</span>
           )}
         </div>
-        {exemplo && <span className="demo">Dados de exemplo</span>}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          {exemplo && <span className="demo">Dados de exemplo</span>}
+          <form method="get" action="/dia" className="periodo-form">
+            <label>
+              <span>Ir para o dia</span>
+              <input type="date" name="data" defaultValue={dia.data} required />
+            </label>
+            <button type="submit" className="botao">
+              Abrir
+            </button>
+          </form>
+        </div>
       </div>
 
       {dia.frase && (

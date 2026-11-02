@@ -9,6 +9,8 @@ import {
 } from "@/lib/consultas";
 import { Linha } from "@/components/graficos";
 import Duvida from "@/components/Duvida";
+import SeletorPeriodo from "@/components/SeletorPeriodo";
+import { diasEntre, resolverPeriodo } from "@/lib/ranking";
 import { agrupar, mediana, milhar, notaPonderada, numero, somarDias, soma } from "@/lib/util";
 
 export const dynamic = "force-dynamic";
@@ -28,10 +30,10 @@ function Delta({ valor, melhorSeSobe = true, sufixo = "" }: { valor: number | nu
 export default async function DuvidasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dias?: string; filtro?: string }>;
+  searchParams: Promise<{ periodo?: string; de?: string; ate?: string; dias?: string; filtro?: string }>;
 }) {
-  const { dias: diasParam, filtro: filtroParam } = await searchParams;
-  const janela = diasParam === "30" ? 30 : 7;
+  const params = await searchParams;
+  const filtroParam = params.filtro;
   const filtro = filtroParam === "abertas" || filtroParam === "resolvidas" ? filtroParam : "todas";
 
   const supabase = await criarClienteServidor();
@@ -46,14 +48,17 @@ export default async function DuvidasPage({
     );
   }
 
-  const desde = somarDias(ultima, -(janela - 1));
+  const periodo = resolverPeriodo(params, ultima, "7");
+  const desde = periodo.desde;
+  const fim = periodo.ate;
+  const janela = diasEntre(desde, fim);
   const antesDesde = somarDias(desde, -janela);
   const antesAte = somarDias(desde, -1);
 
   const [duvidasTodas, diasTodos, qualidadeTodas] = await Promise.all([
-    obterInsightsPeriodo(supabase, grupo.id, antesDesde, ultima, "duvida"),
-    obterDiasPeriodo(supabase, grupo.id, antesDesde, ultima),
-    obterQualidadePeriodo(supabase, grupo.id, antesDesde, ultima),
+    obterInsightsPeriodo(supabase, grupo.id, antesDesde, fim, "duvida"),
+    obterDiasPeriodo(supabase, grupo.id, antesDesde, fim),
+    obterQualidadePeriodo(supabase, grupo.id, antesDesde, fim),
   ]);
   const exemplo = grupo.nome.includes("(EXEMPLO)");
 
@@ -128,16 +133,10 @@ export default async function DuvidasPage({
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
           {exemplo && <span className="demo">Dados de exemplo</span>}
-          <div className="pills">
-            <Link className={janela === 7 ? "pill on" : "pill"} href="/duvidas?dias=7">
-              7 dias
-            </Link>
-            <Link className={janela === 30 ? "pill on" : "pill"} href="/duvidas?dias=30">
-              30 dias
-            </Link>
-          </div>
         </div>
       </div>
+
+      <SeletorPeriodo periodo={periodo} caminho="/duvidas" extra={filtro === "todas" ? "" : `filtro=${filtro}`} />
 
       <section className="grid3">
         <div className="card">
@@ -192,7 +191,7 @@ export default async function DuvidasPage({
               {(["todas", "abertas", "resolvidas"] as const).map((f) => (
                 <Link
                   key={f}
-                  href={`/duvidas?dias=${janela}&filtro=${f}`}
+                  href={`/duvidas?${periodo.consulta}&filtro=${f}`}
                   className={f === filtro ? "chip on" : "chip"}
                   style={{ padding: "5px 12px" }}
                 >

@@ -9,6 +9,21 @@ import {
 } from "./dados";
 import { ultimoDiaDoMes } from "./util";
 
+/** O Supabase devolve no máximo 1000 linhas por consulta; esta função junta todas as páginas. */
+async function buscarTudo<T>(
+  montar: (de: number, ate: number) => PromiseLike<{ data: unknown[] | null }>,
+): Promise<T[]> {
+  const tamanho = 1000;
+  const todas: T[] = [];
+  for (let de = 0; de < 20_000; de += tamanho) {
+    const { data } = await montar(de, de + tamanho - 1);
+    const linhas = (data ?? []) as T[];
+    todas.push(...linhas);
+    if (linhas.length < tamanho) break;
+  }
+  return todas;
+}
+
 export async function ultimoDia(supabase: SupabaseClient, grupoId: string): Promise<string | null> {
   const { data } = await supabase
     .from("dias")
@@ -174,17 +189,19 @@ export async function obterInsightsPeriodo(
   ate: string,
   tipo?: Insight["tipo"],
 ): Promise<InsightComDia[]> {
-  let consulta = supabase
-    .from("insights")
-    .select(
-      "tipo, titulo, descricao, por_que, qtd_alunos, qtd_mencoes, intensidade, status, respondida_por, resposta_resumo, sugestao, pergunta_texto, resposta_texto, tempo_resposta_min, pergunta_autor:participantes!pergunta_autor_id(nome), resposta_autor:participantes!resposta_autor_id(nome, eh_equipe), tema_id, temas(id, nome), dias!inner(data, grupo_id)",
-    )
-    .eq("dias.grupo_id", grupoId)
-    .gte("dias.data", desde)
-    .lte("dias.data", ate);
-  if (tipo) consulta = consulta.eq("tipo", tipo);
-  const { data } = await consulta;
-  return (data ?? []) as unknown as InsightComDia[];
+  return buscarTudo<InsightComDia>((de, fim) => {
+    let consulta = supabase
+      .from("insights")
+      .select(
+        "tipo, titulo, descricao, por_que, qtd_alunos, qtd_mencoes, intensidade, status, respondida_por, resposta_resumo, sugestao, pergunta_texto, resposta_texto, tempo_resposta_min, pergunta_autor:participantes!pergunta_autor_id(nome), resposta_autor:participantes!resposta_autor_id(nome, eh_equipe), tema_id, temas(id, nome), dias!inner(data, grupo_id)",
+      )
+      .eq("dias.grupo_id", grupoId)
+      .gte("dias.data", desde)
+      .lte("dias.data", ate)
+      .order("id");
+    if (tipo) consulta = consulta.eq("tipo", tipo);
+    return consulta.range(de, fim);
+  });
 }
 
 export async function obterDiasPeriodo(
@@ -242,19 +259,23 @@ export async function obterQualidadePeriodo(
   desde: string,
   ate: string,
 ) {
-  const { data } = await supabase
-    .from("qualidade_dia")
-    .select("dimensao, nota, positivas, negativas, dias!inner(data, grupo_id)")
-    .eq("dias.grupo_id", grupoId)
-    .gte("dias.data", desde)
-    .lte("dias.data", ate);
-  return (data ?? []) as unknown as {
+  return buscarTudo<{
     dimensao: string;
     nota: number | null;
     positivas: number;
     negativas: number;
     dias: { data: string };
-  }[];
+  }>((de, fim) =>
+    supabase
+      .from("qualidade_dia")
+      .select("dimensao, nota, positivas, negativas, dias!inner(data, grupo_id)")
+      .eq("dias.grupo_id", grupoId)
+      .gte("dias.data", desde)
+      .lte("dias.data", ate)
+      .order("dia_id")
+      .order("dimensao")
+      .range(de, fim),
+  );
 }
 
 // ---------- Alunos ----------
@@ -265,21 +286,25 @@ export async function obterAtividadePeriodo(
   desde: string,
   ate: string,
 ) {
-  const { data } = await supabase
-    .from("atividade_dia")
-    .select(
-      "mensagens, respostas_uteis, duvidas, participantes(id, nome, eh_equipe), dias!inner(data, grupo_id)",
-    )
-    .eq("dias.grupo_id", grupoId)
-    .gte("dias.data", desde)
-    .lte("dias.data", ate);
-  return (data ?? []) as unknown as {
+  return buscarTudo<{
     mensagens: number;
     respostas_uteis: number;
     duvidas: number;
     participantes: { id: string; nome: string; eh_equipe: boolean } | null;
     dias: { data: string };
-  }[];
+  }>((de, fim) =>
+    supabase
+      .from("atividade_dia")
+      .select(
+        "mensagens, respostas_uteis, duvidas, participantes(id, nome, eh_equipe), dias!inner(data, grupo_id)",
+      )
+      .eq("dias.grupo_id", grupoId)
+      .gte("dias.data", desde)
+      .lte("dias.data", ate)
+      .order("dia_id")
+      .order("participante_id")
+      .range(de, fim),
+  );
 }
 
 // ---------- Equipe ----------

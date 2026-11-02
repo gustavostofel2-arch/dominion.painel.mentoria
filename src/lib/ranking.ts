@@ -17,7 +17,7 @@ export const ROTULO_INTERACAO: Record<TipoInteracao, string> = {
 };
 
 export type Periodo = {
-  chave: "7" | "30" | "comp" | "custom";
+  chave: "1" | "7" | "30" | "comp" | "custom";
   desde: string;
   ate: string;
   rotulo: string;
@@ -43,8 +43,9 @@ export function diasEntre(inicio: string, fim: string): number {
 export function resolverPeriodo(
   params: { periodo?: string; de?: string; ate?: string; dias?: string },
   ultima: string,
+  padrao: "1" | "7" | "30" = "7",
 ): Periodo {
-  const chave = params.periodo ?? (params.dias === "30" ? "30" : undefined);
+  const chave = params.periodo ?? params.dias;
 
   if (chave === "custom" && dataValida(params.de) && dataValida(params.ate)) {
     let [desde, ate] = [params.de, params.ate];
@@ -69,12 +70,14 @@ export function resolverPeriodo(
     };
   }
 
-  const janela = chave === "30" ? 30 : 7;
+  const escolhida = chave === "1" || chave === "7" || chave === "30" ? chave : padrao;
+  const janela = Number(escolhida);
+  const desde = somarDias(ultima, -(janela - 1));
   return {
-    chave: chave === "30" ? "30" : "7",
-    desde: somarDias(ultima, -(janela - 1)),
+    chave: escolhida,
+    desde,
     ate: ultima,
-    rotulo: `Últimos ${janela} dias · ${dataBr(somarDias(ultima, -(janela - 1)))} a ${dataBr(ultima)}`,
+    rotulo: janela === 1 ? `Último dia · ${dataBr(ultima)}` : `Últimos ${janela} dias · ${dataBr(desde)} a ${dataBr(ultima)}`,
     consulta: `periodo=${janela}`,
   };
 }

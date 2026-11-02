@@ -3,6 +3,8 @@ import { criarClienteServidor } from "@/lib/supabase/server";
 import { obterGrupo, rotuloTipo, type Insight } from "@/lib/dados";
 import { obterInsightsPeriodo, ultimoDia } from "@/lib/consultas";
 import { Linha, Spark } from "@/components/graficos";
+import SeletorPeriodo from "@/components/SeletorPeriodo";
+import { diasEntre, resolverPeriodo } from "@/lib/ranking";
 import { agrupar, diaMesCurto, soma, somarDias, variacaoPct } from "@/lib/util";
 
 export const dynamic = "force-dynamic";
@@ -29,9 +31,10 @@ function corTendencia(tipo: Tipo, subiu: boolean): string {
 export default async function TemasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tipo?: string; tema?: string }>;
+  searchParams: Promise<{ periodo?: string; de?: string; ate?: string; dias?: string; tipo?: string; tema?: string }>;
 }) {
-  const { tipo: tipoParam, tema: temaParam } = await searchParams;
+  const params = await searchParams;
+  const { tipo: tipoParam, tema: temaParam } = params;
   const filtro = FILTROS.some((f) => f.valor === tipoParam) ? (tipoParam as string) : "todos";
 
   const supabase = await criarClienteServidor();
@@ -47,17 +50,21 @@ export default async function TemasPage({
     );
   }
 
-  const desde = somarDias(ultima, -29);
-  const insights = (await obterInsightsPeriodo(supabase, grupo.id, desde, ultima)).filter((i) => i.temas);
+  const periodo = resolverPeriodo(params, ultima, "7");
+  const fim = periodo.ate;
+  const janela = diasEntre(periodo.desde, fim);
+  const nGrafico = Math.min(Math.max(janela, 14), 45); // dias mostrados nos gráficos
+  // Busca também o período anterior (para dizer se o tema subiu ou caiu)
+  const desde = somarDias(fim, -(Math.max(2 * janela, nGrafico) - 1));
+  const insights = (await obterInsightsPeriodo(supabase, grupo.id, desde, fim)).filter((i) => i.temas);
   const exemplo = grupo.nome.includes("(EXEMPLO)");
 
-  const dataDe = (k: number) => somarDias(ultima, -k);
+  const dataDe = (k: number) => somarDias(fim, -k);
 
-  // Só dá para dizer "subiu" ou "novo" quando existem pelo menos 14 dias de histórico (7 atuais + 7 anteriores)
-  const primeiraData = insights.reduce((menor, i) => (i.dias.data < menor ? i.dias.data : menor), ultima);
-  const diasDeHistorico =
-    Math.round((new Date(`${ultima}T12:00:00Z`).getTime() - new Date(`${primeiraData}T12:00:00Z`).getTime()) / 86_400_000) + 1;
-  const temComparacao = diasDeHistorico >= 14;
+  // Só dá para dizer "subiu" ou "novo" quando existe histórico para o período atual e para o anterior
+  const primeiraData = insights.reduce((menor, i) => (i.dias.data < menor ? i.dias.data : menor), fim);
+  const diasDeHistorico = diasEntre(primeiraData, fim);
+  const temComparacao = diasDeHistorico >= 2 * janela;
   const grupos = agrupar(insights, (i) => i.temas!.id);
 
   const linhas = [...grupos.entries()].map(([id, lista]) => {
@@ -70,19 +77,19 @@ export default async function TemasPage({
         const d = dataDe(n - 1 - idx);
         return soma(lista.filter((i) => i.dias.data === d).map((i) => i.qtd_mencoes));
       });
-    const sete = mencoesEm(dataDe(6), ultima);
-    const anterior7 = mencoesEm(dataDe(13), dataDe(7));
+    const sete = mencoesEm(periodo.desde, fim);
+    const anterior7 = mencoesEm(somarDias(periodo.desde, -janela), somarDias(periodo.desde, -1));
     return {
       id,
       nome: lista[0].temas!.nome,
       tipo,
-      hoje: mencoesEm(ultima, ultima),
+      hoje: mencoesEm(fim, fim),
       sete,
       anterior7,
       variacao: temComparacao ? variacaoPct(sete, anterior7) : null,
       novo: temComparacao && anterior7 === 0 && sete > 0,
-      serie14: serie(14),
-      serie30: serie(30),
+      serie14: serie(nGrafico),
+      serie30: serie(nGrafico),
       dias: new Set(lista.map((i) => i.dias.data)).size,
       ocorrencias: [...lista].sort((a, b) => b.dias.data.localeCompare(a.dias.data)),
     };
@@ -104,15 +111,18 @@ export default async function TemasPage({
         {exemplo && <span className="demo">Dados de exemplo</span>}
       </div>
 
+      <SeletorPeriodo periodo={periodo} caminho="/temas" opcoes={["1", "7", "30"]} extra={`tipo=${filtro}`} />
+
       <div className="chips">
         {FILTROS.map((f) => (
-          <Link key={f.valor} href={`/temas?tipo=${f.valor}`} className={f.valor === filtro ? "chip on" : "chip"}>
+          <Link
+            key={f.valor}
+            href={`/temas?${periodo.consulta}&tipo=${f.valor}`}
+            className={f.valor === filtro ? "chip on" : "chip"}
+          >
             {f.rotulo}
           </Link>
         ))}
-        <span className="chip" style={{ marginLeft: "auto" }}>
-          Últimos 7 dias · até {diaMesCurto(ultima)}
-        </span>
       </div>
 
       <section className="row um" style={{ alignItems: "flex-start" }}>
@@ -122,8 +132,8 @@ export default async function TemasPage({
               <div className="tr cab">
                 <span>Tema</span>
                 <span>Tipo</span>
-                <span style={{ textAlign: "right" }}>Hoje</span>
-                <span style={{ textAlign: "right" }}>7 dias</span>
+                <span style={{ textAlign: "right" }}>{janela === 1 ? "Dia" : "Último dia"}</span>
+                <span style={{ textAlign: "right" }}>No período</span>
                 <span>Tendência</span>
               </div>
               {visiveis.length === 0 && <p className="sub" style={{ padding: 12 }}>Nenhum tema desse tipo no período.</p>}
@@ -133,17 +143,17 @@ export default async function TemasPage({
                 return (
                   <Link
                     key={l.id}
-                    href={`/temas?tipo=${filtro}&tema=${l.id}`}
+                    href={`/temas?${periodo.consulta}&tipo=${filtro}&tema=${l.id}`}
                     className={selecionado?.id === l.id ? "tr ativa" : "tr"}
                   >
                     <span style={{ fontWeight: 700 }}>{l.nome}</span>
                     <span>
                       <span className={`tag t-${l.tipo}`}>{rotuloTipo(l.tipo)}</span>
                     </span>
-                    <span className="num" data-l="Hoje">
+                    <span className="num" data-l="Último dia">
                       {l.hoje}
                     </span>
-                    <span className="num" data-l="7 dias">
+                    <span className="num" data-l="No período">
                       {l.sete}
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -171,7 +181,7 @@ export default async function TemasPage({
             <span className={`tag t-${selecionado.tipo}`}>{rotuloTipo(selecionado.tipo)}</span>
             <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 10 }}>{selecionado.nome}</h2>
             <p className="sub" style={{ marginTop: 2 }}>
-              Aparece em {selecionado.dias} dos últimos 30 dias
+              Aparece em {selecionado.dias} dos últimos {nGrafico} dias
             </p>
             <div style={{ marginTop: 14 }}>
               <Linha
@@ -179,7 +189,7 @@ export default async function TemasPage({
                 cor={corTendencia(selecionado.tipo, true)}
                 area
                 altura={110}
-                rotulo={`Evolução de ${selecionado.nome} nos últimos 30 dias`}
+                rotulo={`Evolução de ${selecionado.nome} nos últimos ${nGrafico} dias`}
               />
             </div>
 
